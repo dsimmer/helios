@@ -7,7 +7,7 @@ Autocomplete on your favourite directories
 https://unix.stackexchange.com/questions/1800/how-to-specify-a-custom-autocomplete-for-specific-commands
 add script to your /bin
 hc -s 'executable name' 'type your command here'
-use -sb to have helios save the command internally instead of putting a script in your bin.
+???use -sb to have helios save the command internally instead of putting a script in your bin.
 
 hc -e /folder/path/
 to export your settings
