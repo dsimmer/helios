@@ -30,33 +30,24 @@ func Init() {
 	// todo fix this bash func
 	content := `
 function hc() {
-	for opt in $@
+	hset=0
+	anyset=0
+	for opt in "$@"
 	do
+		echo $opt
 		case $opt in
-			--no-log) export SILENT=true ;;
-			-*|--*)
-				e_warning "Invalid option $opt"
-				run_help
-				;;
+			-h) hset=1 ;;
+			-*) anyset=1 ;;
 		esac
 	done
-	pass to func
-	cd "` + "`helios ${}`" + `"
-	verbose='false'
-	aflag=''
-	bflag=''
-	files=''
-	while getopts 'rh:f' flag; do
-	case "${flag}" in
-		r) regex="${OPTARG}" ;;
-		h) history='true' ;;
-		f) favourite="${OPTARG}" ;;
-		v) verbose='true' ;;
-		*) error "Unexpected option ${flag}" ;;
-	esac
-	done
-
+	if [[ (! ("$#" -eq 1 && $anyset -eq 0 && $hset -eq 0)) && $hset -eq 0 ]]; then
+		helios "$@"
+	else
+		cdResult=$(helios "$@")
+		cd "$cdResult"
+	fi
 }
+
 export -f hc
 `
 	suffix := `# End of generated helios function`
@@ -84,6 +75,8 @@ export -f hc
 	f, err = os.Create(exPath + string(os.PathSeparator) + "heliosfavourites")
 	check(err)
 	check(f.Close())
+	var empty map[string]string
+	saveFavourites(empty)
 	os.Chmod(exPath+string(os.PathSeparator)+"heliosfavourites", 0666)
 }
 
@@ -188,11 +181,12 @@ func loadFavourites() map[string]string {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosfavourites")
 
-	b := new(bytes.Buffer)
+	data, err := os.Open(exPath + string(os.PathSeparator) + "heliosfavourites")
+	defer data.Close()
+
 	var decodedMap map[string]string
-	d := gob.NewDecoder(b)
+	d := gob.NewDecoder(data)
 
 	err = d.Decode(&decodedMap)
 	check(err)
@@ -221,6 +215,8 @@ func CD(fav bool, regex bool, args []string) {
 	}
 
 	addToHistory(result)
+
+	// Print result for input into cd
 	fmt.Println(result)
 
 	if fav {
@@ -268,9 +264,9 @@ func main() {
 
 	flag.Parse()
 	frPtr := *fPtr || *rPtr
-	counter := inter(*sPtr) + inter(*ePtr) + inter(*iPtr) + inter(*iPtr) + inter(frPtr) + inter(*hPtr) + inter(*initPtr)
-	if counter >= 2 || counter == 0 {
-		err := errors.New("Incorrect combination of arguments (>=2 or 0)")
+	counter := inter(*sPtr) + inter(*ePtr) + inter(*iPtr) + inter(frPtr) + inter(*hPtr) + inter(*initPtr)
+	if counter >= 2 {
+		err := errors.New("Incorrect combination of arguments (>=2)")
 		panic(err)
 	}
 
@@ -286,7 +282,7 @@ func main() {
 	if *iPtr {
 		ImportAll(flag.Args())
 	}
-	if frPtr {
+	if frPtr || counter == 0 {
 		CD(*fPtr, *rPtr, flag.Args())
 	}
 	if *hPtr {
