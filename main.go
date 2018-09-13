@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -67,6 +68,27 @@ export -f hc
 	f, err := os.Create(exPath + string(os.PathSeparator) + "helioshistory")
 	check(err)
 	check(f.Close())
+	f, err = os.Create(exPath + string(os.PathSeparator) + "heliosnotes.yml")
+	check(err)
+	_, err = f.WriteString(`linux:
+  - chmod -R 777 dir
+  
+js:
+  - === != ==
+
+go:
+  - check(err) good practice
+
+clojurescript:
+  - (.. object -property -nestedproperty)
+
+clojure:
+  - macros dont parse inputs
+
+elixir:
+  - No error checking`)
+	check(err)
+	check(f.Close())
 	os.Chmod(exPath+string(os.PathSeparator)+"helioshistory", 0666)
 	f, err = os.Create(exPath + string(os.PathSeparator) + "heliossettings")
 	check(err)
@@ -83,6 +105,49 @@ export -f hc
 func check(e error) {
 	if e != nil {
 		panic(e)
+	}
+}
+
+func SaveNote(category string, line string) {
+	ex, err := os.Executable()
+	check(err)
+	exPath := filepath.Dir(ex)
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes")
+	check(err)
+	dataString := string(data)
+	if strings.Index(dataString, category+":") > -1 {
+		newString := strings.SplitAfter(dataString, category+":")
+		dataString = strings.Join([]string{newString[0], "\n  - " + line, newString[1]}, "")
+	} else {
+		dataString = dataString + "\n\n" + category + ":" + "\n" + "  - " + line
+	}
+
+	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"heliosnotes", []byte(dataString), 0777)
+	check(err)
+}
+
+//todo fuzzy search
+
+func GrepNote(category string, line string) {
+	regexer := regexp.MustCompile(`  -.*?\n`)
+	ex, err := os.Executable()
+	check(err)
+	exPath := filepath.Dir(ex)
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes")
+	check(err)
+	dataString := string(data)
+	if category != "" {
+		newString := strings.SplitAfter(dataString, category+":")
+		newString2 := strings.Split(newString[1], "\n\n")
+		matches := regexer.FindAll([]byte(newString2[0]), -1)
+		for i := range matches {
+			fmt.Println(i)
+		}
+	} else {
+		matches := regexer.FindAll([]byte(dataString), -1)
+		for i := range matches {
+			fmt.Println(i)
+		}
 	}
 }
 
@@ -249,6 +314,8 @@ func History(args []string) {
 }
 
 func main() {
+	snPtr := flag.Bool("sn", false, "Save note")
+	gnPtr := flag.Bool("gn", false, "Get note (via grep)")
 	sPtr := flag.Bool("s", false, "Define and save a script")
 
 	ePtr := flag.Bool("e", false, "Export your settings and scripts")
@@ -264,7 +331,7 @@ func main() {
 
 	flag.Parse()
 	frPtr := *fPtr || *rPtr
-	counter := inter(*sPtr) + inter(*ePtr) + inter(*iPtr) + inter(frPtr) + inter(*hPtr) + inter(*initPtr)
+	counter := inter(*sPtr) + inter(*ePtr) + inter(*iPtr) + inter(frPtr) + inter(*hPtr) + inter(*initPtr) + inter(*snPtr) + inter(*gnPtr)
 	if counter >= 2 {
 		err := errors.New("Incorrect combination of arguments (>=2)")
 		panic(err)
@@ -272,6 +339,16 @@ func main() {
 
 	if *initPtr {
 		Init()
+	}
+	if *gnPtr {
+		if flag.NArg() > 1 {
+			GrepNote(flag.Arg(0), flag.Arg(1))
+		} else {
+			GrepNote("", flag.Arg(1))
+		}
+	}
+	if *snPtr {
+		SaveNote(flag.Arg(0), flag.Arg(1))
 	}
 	if *sPtr {
 		SaveScript(flag.Args())
