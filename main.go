@@ -65,14 +65,18 @@ export -f hc
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	f, err := os.Create(exPath + string(os.PathSeparator) + "helioshistory")
-	check(err)
-	check(f.Close())
-	f, err = os.Create(exPath + string(os.PathSeparator) + "heliosnotes.yml")
-	check(err)
-	_, err = f.WriteString(`linux:
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helioshistory"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "helioshistory")
+		check(err)
+		check(f.Close())
+		os.Chmod(exPath+string(os.PathSeparator)+"helioshistory", 0666)
+	}
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "heliosnotes.yml"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "heliosnotes.yml")
+		check(err)
+		_, err = f.WriteString(`linux:
   - chmod -R 777 dir
-  
+
 js:
   - === != ==
 
@@ -87,19 +91,23 @@ clojure:
 
 elixir:
   - No error checking`)
-	check(err)
-	check(f.Close())
-	os.Chmod(exPath+string(os.PathSeparator)+"helioshistory", 0666)
-	f, err = os.Create(exPath + string(os.PathSeparator) + "heliossettings")
-	check(err)
-	check(f.Close())
-	os.Chmod(exPath+string(os.PathSeparator)+"heliossettings", 0666)
-	f, err = os.Create(exPath + string(os.PathSeparator) + "heliosfavourites")
-	check(err)
-	check(f.Close())
-	var empty map[string]string
-	saveFavourites(empty)
-	os.Chmod(exPath+string(os.PathSeparator)+"heliosfavourites", 0666)
+		check(err)
+		check(f.Close())
+	}
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "heliossettings"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "heliossettings")
+		check(err)
+		check(f.Close())
+		os.Chmod(exPath+string(os.PathSeparator)+"heliossettings", 0666)
+	}
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "heliosfavourites"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "heliosfavourites")
+		check(err)
+		check(f.Close())
+		os.Chmod(exPath+string(os.PathSeparator)+"heliosfavourites", 0666)
+		var empty map[string]string
+		saveFavourites(empty)
+	}
 }
 
 func check(e error) {
@@ -112,7 +120,7 @@ func SaveNote(category string, line string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes")
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes.yml")
 	check(err)
 	dataString := string(data)
 	if strings.Index(dataString, category+":") > -1 {
@@ -122,31 +130,31 @@ func SaveNote(category string, line string) {
 		dataString = dataString + "\n\n" + category + ":" + "\n" + "  - " + line
 	}
 
-	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"heliosnotes", []byte(dataString), 0777)
+	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"heliosnotes.yml", []byte(dataString), 0777)
 	check(err)
 }
 
 //todo fuzzy search
 
 func GrepNote(category string, line string) {
-	regexer := regexp.MustCompile(`  -.*?\n`)
+	regexer := regexp.MustCompile(`  -.*?` + line + `.*?\n`)
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes")
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes.yml")
 	check(err)
 	dataString := string(data)
 	if category != "" {
 		newString := strings.SplitAfter(dataString, category+":")
 		newString2 := strings.Split(newString[1], "\n\n")
 		matches := regexer.FindAll([]byte(newString2[0]), -1)
-		for i := range matches {
-			fmt.Println(i)
+		for _, res := range matches {
+			fmt.Println(strings.TrimLeft(string(res), "  -"))
 		}
 	} else {
 		matches := regexer.FindAll([]byte(dataString), -1)
-		for i := range matches {
-			fmt.Println(i)
+		for _, res := range matches {
+			fmt.Println(strings.TrimLeft(string(res), "  -"))
 		}
 	}
 }
@@ -344,7 +352,7 @@ func main() {
 		if flag.NArg() > 1 {
 			GrepNote(flag.Arg(0), flag.Arg(1))
 		} else {
-			GrepNote("", flag.Arg(1))
+			GrepNote("", flag.Arg(0))
 		}
 	}
 	if *snPtr {
