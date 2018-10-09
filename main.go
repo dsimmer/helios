@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func inter(booler bool) int {
@@ -65,14 +66,14 @@ export -f hc
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helioshistory"); os.IsNotExist(err) {
-		f, err := os.Create(exPath + string(os.PathSeparator) + "helioshistory")
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helios_history"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "helios_history")
 		check(err)
 		check(f.Close())
-		os.Chmod(exPath+string(os.PathSeparator)+"helioshistory", 0666)
+		os.Chmod(exPath+string(os.PathSeparator)+"helios_history", 0666)
 	}
-	if _, err := os.Stat(exPath + string(os.PathSeparator) + "heliosnotes.yml"); os.IsNotExist(err) {
-		f, err := os.Create(exPath + string(os.PathSeparator) + "heliosnotes.yml")
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helios_notes.yml"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "helios_notes.yml")
 		check(err)
 		_, err = f.WriteString(`linux:
   - chmod -R 777 dir
@@ -93,18 +94,28 @@ elixir:
   - No error checking`)
 		check(err)
 		check(f.Close())
+		os.Chmod(exPath+string(os.PathSeparator)+"helios_notes.yml", 0666)
 	}
-	if _, err := os.Stat(exPath + string(os.PathSeparator) + "heliossettings"); os.IsNotExist(err) {
-		f, err := os.Create(exPath + string(os.PathSeparator) + "heliossettings")
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helios_achievements.yml"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "helios_achievements.yml")
+		check(err)
+		_, err = f.WriteString(`Achievements to date:
+`)
 		check(err)
 		check(f.Close())
-		os.Chmod(exPath+string(os.PathSeparator)+"heliossettings", 0666)
+		os.Chmod(exPath+string(os.PathSeparator)+"helios_achievements.yml", 0666)
 	}
-	if _, err := os.Stat(exPath + string(os.PathSeparator) + "heliosfavourites"); os.IsNotExist(err) {
-		f, err := os.Create(exPath + string(os.PathSeparator) + "heliosfavourites")
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helios_settings"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "helios_settings")
 		check(err)
 		check(f.Close())
-		os.Chmod(exPath+string(os.PathSeparator)+"heliosfavourites", 0666)
+		os.Chmod(exPath+string(os.PathSeparator)+"helios_settings", 0666)
+	}
+	if _, err := os.Stat(exPath + string(os.PathSeparator) + "helios_favourites"); os.IsNotExist(err) {
+		f, err := os.Create(exPath + string(os.PathSeparator) + "helios_favourites")
+		check(err)
+		check(f.Close())
+		os.Chmod(exPath+string(os.PathSeparator)+"helios_favourites", 0666)
 		var empty map[string]string
 		saveFavourites(empty)
 	}
@@ -120,7 +131,7 @@ func SaveNote(category string, line string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes.yml")
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helios_notes.yml")
 	check(err)
 	dataString := string(data)
 	if strings.Index(dataString, category+":") > -1 {
@@ -130,8 +141,19 @@ func SaveNote(category string, line string) {
 		dataString = dataString + "\n\n" + category + ":" + "\n" + "  - " + line
 	}
 
-	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"heliosnotes.yml", []byte(dataString), 0777)
+	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"helios_notes.yml", []byte(dataString), 0777)
 	check(err)
+}
+
+// todo write an import method so you can import and sort achievements
+// todo stats on your achievements
+func SaveAchievement(line string) {
+	ex, err := os.Executable()
+	check(err)
+	exPath := filepath.Dir(ex)
+	f, err := os.OpenFile(exPath+string(os.PathSeparator)+"helios_achievements.yml", os.O_APPEND|os.O_WRONLY, 0600)
+	check(err)
+	f.WriteString("\n" + time.Now().String() + ": " + line)
 }
 
 //todo fuzzy search
@@ -141,7 +163,7 @@ func GrepNote(category string, line string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliosnotes.yml")
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helios_notes.yml")
 	check(err)
 	dataString := string(data)
 	if category != "" {
@@ -163,7 +185,7 @@ func addToHistory(line string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	f, err := os.OpenFile(exPath+string(os.PathSeparator)+"helioshistory", os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(exPath+string(os.PathSeparator)+"helios_history", os.O_APPEND|os.O_WRONLY, 0600)
 	check(err)
 
 	defer f.Close()
@@ -173,16 +195,34 @@ func addToHistory(line string) {
 	}
 }
 
+//todo this should probably use a regex instead?
+func SearchSettings() {
+	ex, err := os.Executable()
+	check(err)
+	exPath := filepath.Dir(ex)
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helios_settings")
+	check(err)
+	splitData := strings.Split(string(data), "#!")
+	result := ""
+	for i, d := range splitData {
+		if i%2 == 1 {
+			result = result + "\n" + d
+		}
+	}
+	fmt.Println(result)
+}
+
+// todo parse this to import and recreate programs
 func addToSettings(line string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	f, err := os.OpenFile(exPath+string(os.PathSeparator)+"heliossettings", os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(exPath+string(os.PathSeparator)+"helios_settings", os.O_APPEND|os.O_WRONLY, 0600)
 	check(err)
 
 	defer f.Close()
 
-	if _, err = f.WriteString(line + "###"); err != nil {
+	if _, err = f.WriteString(line); err != nil {
 		panic(err)
 	}
 }
@@ -194,7 +234,7 @@ func SaveScript(args []string) {
 		panic(err)
 	}
 
-	addToSettings(args[0] + "##" + "#!/bin/sh\n" + args[1])
+	addToSettings("#!" + args[0] + "#!/bin/sh\n" + args[1])
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
@@ -212,7 +252,7 @@ func ExportAll(args []string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "heliossettings")
+	data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helios_settings")
 	check(err)
 
 	err = ioutil.WriteFile(args[0], data, 0666)
@@ -230,7 +270,7 @@ func ImportAll(args []string) {
 	ex, err := os.Executable()
 	check(err)
 	exPath := filepath.Dir(ex)
-	err = os.Remove(exPath + string(os.PathSeparator) + "heliossettings")
+	err = os.Remove(exPath + string(os.PathSeparator) + "helios_settings")
 	check(err)
 	addToSettings(string(data))
 }
@@ -246,7 +286,7 @@ func saveFavourites(favourites map[string]string) {
 	err = e.Encode(favourites)
 	check(err)
 
-	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"heliosfavourites", b.Bytes(), 0666)
+	err = ioutil.WriteFile(exPath+string(os.PathSeparator)+"helios_favourites", b.Bytes(), 0666)
 	check(err)
 }
 
@@ -255,7 +295,7 @@ func loadFavourites() map[string]string {
 	check(err)
 	exPath := filepath.Dir(ex)
 
-	data, err := os.Open(exPath + string(os.PathSeparator) + "heliosfavourites")
+	data, err := os.Open(exPath + string(os.PathSeparator) + "helios_favourites")
 	defer data.Close()
 
 	var decodedMap map[string]string
@@ -266,6 +306,7 @@ func loadFavourites() map[string]string {
 	return decodedMap
 }
 
+//todo test this works
 // CD improves the editors regular functionality with a favourite and regex serch option. Regex also searches favourites
 func CD(fav bool, regex bool, args []string) {
 	if len(args) > 2 || (!fav && (len(args) > 1)) {
@@ -307,7 +348,7 @@ func History(args []string) {
 		ex, err := os.Executable()
 		check(err)
 		exPath := filepath.Dir(ex)
-		data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helioshistory")
+		data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helios_history")
 		check(err)
 		// todo Goto line in history and return it for the cd bash command
 		fmt.Println(data)
@@ -315,27 +356,28 @@ func History(args []string) {
 		ex, err := os.Executable()
 		check(err)
 		exPath := filepath.Dir(ex)
-		data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helioshistory")
+		data, err := ioutil.ReadFile(exPath + string(os.PathSeparator) + "helios_history")
 		check(err)
 		fmt.Println(data)
 	}
 }
 
 func main() {
-	snPtr := flag.Bool("sn", false, "Save note")
-	gnPtr := flag.Bool("gn", false, "Get note (via grep)")
-	sPtr := flag.Bool("s", false, "Define and save a script")
+	snPtr := flag.Bool("sn", false, "Save note (arg 1: category, arg2: line)")
+	saPtr := flag.Bool("sa", false, "Save achievement, automatically timestamped (arg 1: line)")
+	gnPtr := flag.Bool("gn", false, "Get note (via grep) (arg 1: category, arg2: line) ||  (arg1: line)")
+	sPtr := flag.Bool("s", false, "Define and save a script (arg 1: name, arg2: program, one string, auto prefixed with #!/bin/sh\\n and saved as a file). Don't forget to add help via bash 'if [ \"$1\" == \"-h\" ]; then\necho \"Usage: `basename $0` [somestuff]\"\nexit 0\nfi")
+	slPtr := flag.Bool("sl", false, "List all available scripts (noargs)")
+	ePtr := flag.Bool("e", false, "Export your settings and scripts (arg 1: path to save)")
 
-	ePtr := flag.Bool("e", false, "Export your settings and scripts")
+	iPtr := flag.Bool("i", false, "Import your settings and scripts (arg 1: path to import)")
 
-	iPtr := flag.Bool("i", false, "Import your settings and scripts")
+	fPtr := flag.Bool("f", false, "TODO: Favourite a directory, also works with the r option. Automatically navigates there. (arg 1: favourite name, arg 2: search text) || (arg 1: search text)")
+	rPtr := flag.Bool("r", false, "TODO: Regex search")
 
-	fPtr := flag.Bool("f", false, "Favourite a directory, works with r. Automatically navigates there")
-	rPtr := flag.Bool("r", false, "Regex search")
+	hPtr := flag.Bool("h", false, "History of navigation in helios. Additional argument navigates to that item (noargs) || (arg 1: history line item to navigate to)")
 
-	hPtr := flag.Bool("h", false, "History of navigation in helios. Additional argument navigates to that item")
-
-	initPtr := flag.Bool("init", false, "Init, required for CD functions to work properly")
+	initPtr := flag.Bool("init", false, "Init, required for CD functions to work properly. Creates storage files")
 
 	flag.Parse()
 	frPtr := *fPtr || *rPtr
@@ -358,8 +400,19 @@ func main() {
 	if *snPtr {
 		SaveNote(flag.Arg(0), flag.Arg(1))
 	}
+	if *saPtr {
+		SaveAchievement(flag.Arg(0))
+	}
 	if *sPtr {
 		SaveScript(flag.Args())
+	}
+	if *slPtr {
+		if flag.NArg() == 0 {
+			SearchSettings()
+		} else {
+			err := errors.New("Too many arguments for -sl")
+			panic(err)
+		}
 	}
 	if *ePtr {
 		ExportAll(flag.Args())
